@@ -84,10 +84,12 @@ CUSTOM_CSS = f"""
         color: {TEXT_PRIMARY};
     }}
 
-    /* Hide default Streamlit header/footer for cleaner look */
+    /* Hide default Streamlit menu/footer for cleaner look, keep sidebar toggle */
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
-    header {{visibility: hidden;}}
+    header {{visibility: hidden; height: 0; padding: 0; margin: 0;}}
+    button[kind="header"] {{visibility: visible; position: fixed; top: 0.5rem; left: 0.5rem; z-index: 999;}}
+    [data-testid="collapsedControl"] {{visibility: visible; position: fixed; top: 0.5rem; left: 0.5rem; z-index: 999;}}
 
     /* KPI metric cards */
     .kpi-card {{
