@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Environment
+.env
+*.env
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# Project files not needed for the dashboard
+IBISA data/
+notebooks/
+src/
+tests/
+outputs/
+burundi_dashboard*.html
+dashboard.html
+PROJECT_STATUS.md
+shield-dashboard/requirements.txt
+
+# Large/unnecessary assets (keep only the white logo)
+Shield Assets/One Acre Shield_Logo.ai
+Shield Assets/One Acre Shield_Logo.pdf
+Shield Assets/One Acre Shield_Logo.png
+Shield Assets/One Acre Shield_Logo.svg
+Shield Assets/Prosperity Leaf_Solid_KKM Green.ai
+Shield Assets/Prosperity Leaf_Solid_KKM Green.pdf
+Shield Assets/Prosperity Leaf_Solid_KKM Green.png
+Shield Assets/Prosperity Leaf_Solid_KKM Green.svg
+Shield Assets/Prosperity Leaf_Solid_White.png
+
+# Data — only keep data/processed/heat_days_7pct.csv
+data/ibisa_extracted/
+data/raw/
+data/processed/actuarial_*.csv
+data/processed/calibrated_*.csv
+data/processed/daily_max_temperatures.csv
+data/processed/extended_metrics_*.csv
+data/processed/heat_days_5pct.csv
+data/processed/heat_days_10pct.csv
+data/processed/ibisa_*.csv
+data/processed/payouts_*.csv
+data/processed/risk_metrics_*.csv
+data/processed/threshold_comparison.csv
+
+# Config — only keep locations.csv and thresholds.csv
+config/product_config.yaml
+
+# One-time scripts (not needed at runtime)
+shield-dashboard/fetch_2025.py
