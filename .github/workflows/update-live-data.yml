@@ -6,6 +6,9 @@ on:
     - cron: "0 6 * 3-6 *"
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
+permissions:
+  contents: write
+
 jobs:
   fetch-live-data:
     runs-on: ubuntu-latest
@@ -37,7 +40,7 @@ jobs:
               json.load(open('/tmp/gee-key.json'))['client_email'],
               '/tmp/gee-key.json'
           )
-          ee.Initialize(credentials, project='civic-automata-488615-t8')
+          ee.Initialize(credentials, project='${{ secrets.GEE_PROJECT_ID }}')
           print('[GEE] Initialized with service account.')
 
           # Now run the fetcher

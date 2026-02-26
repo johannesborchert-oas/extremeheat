@@ -17,6 +17,7 @@ import numpy as np
 import plotly.graph_objects as go
 from pathlib import Path
 import base64
+from html import escape as html_escape
 
 # ---------------------------------------------------------------------------
 # Page config (must be first Streamlit call)
@@ -226,7 +227,7 @@ def load_locations() -> pd.DataFrame:
     try:
         return pd.read_csv(LOCATIONS_PATH)
     except FileNotFoundError:
-        st.error(f"Locations file not found: {LOCATIONS_PATH}")
+        st.error("Locations configuration file not found.")
         return pd.DataFrame(columns=["name", "latitude", "longitude"])
 
 
@@ -239,7 +240,7 @@ def load_thresholds() -> pd.DataFrame:
             columns={"threshold_7pct": "threshold"}
         )
     except FileNotFoundError:
-        st.error(f"Thresholds file not found: {THRESHOLDS_PATH}")
+        st.error("Thresholds configuration file not found.")
         return pd.DataFrame(columns=["name", "threshold"])
 
 
@@ -249,7 +250,7 @@ def load_heat_days() -> pd.DataFrame:
     try:
         return pd.read_csv(HEAT_DAYS_PATH)
     except FileNotFoundError:
-        st.error(f"Heat days file not found: {HEAT_DAYS_PATH}")
+        st.error("Heat days data file not found.")
         return pd.DataFrame()
 
 
@@ -498,7 +499,7 @@ if heat_series is not None:
     village_table = build_village_table(heat_series, thresholds_df)
     total_payout = village_table["Payout ($)"].sum()
     worst_idx = village_table["Payout ($)"].idxmax()
-    worst_village = village_table.loc[worst_idx, "Village"]
+    worst_village = html_escape(str(village_table.loc[worst_idx, "Village"]))
     worst_payout = village_table.loc[worst_idx, "Payout ($)"]
     worst_heat_days = village_table.loc[worst_idx, "Heat Days"]
 else:
@@ -735,6 +736,7 @@ with map_col:
             for _, vrow in village_table.iterrows():
                 vname = vrow["Village"]
                 coords = loc_dict.get(vname)
+                vname_safe = html_escape(str(vname))
                 if coords is None:
                     continue
 
@@ -746,7 +748,7 @@ with map_col:
 
                 popup_html = (
                     f"<div style='font-family:sans-serif; min-width:160px;'>"
-                    f"<b style='font-size:13px;'>{vname}</b><br>"
+                    f"<b style='font-size:13px;'>{vname_safe}</b><br>"
                     f"<span style='color:#888;'>Threshold:</span> {threshold}°C<br>"
                     f"<span style='color:#888;'>Heat Days:</span> {heat_d}<br>"
                     f"<span style='color:#888;'>Payout:</span> ${payout}<br>"
