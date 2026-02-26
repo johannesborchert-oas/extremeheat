@@ -1,0 +1,114 @@
+name: Update Live Season Data
+
+on:
+  schedule:
+    # Run daily at 06:00 UTC during the coverage season (Mar–Jun)
+    - cron: "0 6 * 3-6 *"
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  fetch-live-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install earthengine-api pandas
+
+      - name: Write GEE service account key
+        run: |
+          echo '${{ secrets.GEE_SERVICE_ACCOUNT_KEY }}' > /tmp/gee-key.json
+
+      - name: Fetch live data from GEE
+        run: |
+          cd shield-dashboard
+          python -c "
+          import json, ee, sys
+          # Authenticate with service account
+          credentials = ee.ServiceAccountCredentials(
+              json.load(open('/tmp/gee-key.json'))['client_email'],
+              '/tmp/gee-key.json'
+          )
+          ee.Initialize(credentials, project='civic-automata-488615-t8')
+          print('[GEE] Initialized with service account.')
+
+          # Now run the fetcher
+          from gee_fetcher import fetch_season_temperatures, compute_heat_days
+          from gee_fetcher import LOCATIONS_CSV, THRESHOLDS_CSV, OUTPUT_CSV
+          from gee_fetcher import SEASON_START_MONTH, SEASON_START_DAY
+          from gee_fetcher import SEASON_END_MONTH, SEASON_END_DAY
+          from gee_fetcher import TOTAL_SEASON_DAYS, ERA5_LATENCY_DAYS
+          import pandas as pd, datetime
+
+          locations_df = pd.read_csv(LOCATIONS_CSV)
+          thresholds_df = pd.read_csv(THRESHOLDS_CSV)
+
+          today = datetime.date.today()
+          season_start = datetime.date(today.year, SEASON_START_MONTH, SEASON_START_DAY)
+          season_end = datetime.date(today.year, SEASON_END_MONTH, SEASON_END_DAY)
+          data_available = today - datetime.timedelta(days=ERA5_LATENCY_DAYS)
+
+          if data_available < season_start:
+              print(f'Season not started. Data available through {data_available}.')
+              # Write empty results with season_day=0
+              empty = locations_df[['name', 'latitude', 'longitude']].copy()
+              empty = empty.merge(
+                  thresholds_df[['name', 'threshold_7pct']].rename(columns={'threshold_7pct': 'threshold'}),
+                  on='name', how='left'
+              )
+              empty['heat_days'] = 0
+              empty['payout'] = 0
+              empty['status'] = 'Safe'
+              empty['last_updated'] = str(data_available)
+              empty['season_day'] = 0
+              empty['total_season_days'] = TOTAL_SEASON_DAYS
+              empty.to_csv(OUTPUT_CSV, index=False)
+              sys.exit(0)
+
+          effective_end = min(data_available, season_end)
+          start_str = season_start.strftime('%Y-%m-%d')
+          end_str = effective_end.strftime('%Y-%m-%d')
+          season_day = (effective_end - season_start).days + 1
+
+          print(f'Fetching {start_str} to {end_str} (day {season_day})')
+          temp_df = fetch_season_temperatures(locations_df, start_str, end_str)
+
+          if temp_df.empty:
+              print('No temp data returned.')
+              sys.exit(1)
+
+          results = compute_heat_days(temp_df, thresholds_df)
+          results = results.merge(locations_df[['name', 'latitude', 'longitude']], on='name', how='left')
+          results['last_updated'] = end_str
+          results['season_day'] = season_day
+          results['total_season_days'] = TOTAL_SEASON_DAYS
+
+          output_columns = ['name','latitude','longitude','threshold','heat_days','payout','status','last_updated','season_day','total_season_days']
+          results = results[output_columns]
+          results.to_csv(OUTPUT_CSV, index=False)
+          print(f'Saved {len(results)} rows to {OUTPUT_CSV}')
+          "
+
+      - name: Clean up key
+        if: always()
+        run: rm -f /tmp/gee-key.json
+
+      - name: Commit and push if data changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add shield-dashboard/live_data.csv
+          if git diff --cached --quiet; then
+            echo "No changes to live_data.csv"
+          else
+            git commit -m "Update live season data ($(date -u +%Y-%m-%d))"
+            git push
+          fi
