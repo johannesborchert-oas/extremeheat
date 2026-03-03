@@ -115,3 +115,11 @@ jobs:
             git commit -m "Update live season data ($(date -u +%Y-%m-%d))"
             git push
           fi
+
+      - name: Keep Streamlit app awake
+        run: |
+          curl -sf --max-time 30 \
+            "https://extremeheat-2mrwls2aynfcpkff7gsjr9.streamlit.app/" \
+            -o /dev/null \
+            && echo "Streamlit app pinged successfully" \
+            || echo "Streamlit app ping failed (may be booting)"
